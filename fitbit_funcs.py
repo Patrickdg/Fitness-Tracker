@@ -1,24 +1,59 @@
 # LIBRARIES
+import os 
+import json
 import pandas as pd
 
-# GET DATA
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import fitbit
+from fitbit import gather_keys_oauth2 as Oauth2
+
+# SETUP
+##SHEETS
+KEY = os.environ.get('GS_KEY')
+
+CLIENT_ID = os.environ.get('FB_ID')
+CLIENT_SECRET = os.environ.get('FB_SCRET')
+
+SCOPE = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+CREDS = ServiceAccountCredentials.from_json_keyfile_name(KEY, SCOPE)
+CLIENT = gspread.authorize(CREDS)
+
+TRACKER = CLIENT.open('Fitness Tracker').sheet1
+
+##FITBIT
+SERVER = Oauth2.OAuth2Server(CLIENT_ID, CLIENT_SECRET)
+SERVER.browser_authorize()
+ACCESS_TOKEN = str(SERVER.fitbit.client.session.token['access_token'])
+REFRESH_TOKEN = str(SERVER.fitbit.client.session.token['refresh_token'])
+
+AUTH2_CLIENT = fitbit.Fitbit(CLIENT_ID, 
+                            CLIENT_SECRET, 
+                            oath2 = True, 
+                            access_token = ACCESS_TOKEN,
+                            refresh_token = REFRESH_TOKEN)
+
+# FUNCTIONS
+def set_date_range(sheet):
+    days = []
+    last_date = max(sheet.col_values(1)[1:])
+
+    return days
+
+    
+
 def get_sleep_data(sleep_days):
     sleep_data = pd.DataFrame()
-
     for day in sleep_days:
-        sleep_full = auth2_client.sleep(date = day)
-
+        sleep_full = AUTH2_CLIENT.sleep(date = day)
         num_sleep_records = sleep_full['summary']['totalSleepRecords']
-
         # If no sleep entry, then append empty line with date
         # If # sleep entries > 1, Extract MainSleep using n = 1
         if num_sleep_records == 0:
             pass
         else:
-            if num_sleep_records == 1:
-                main_sleep = 0
-            elif num_sleep_records > 1:
-                main_sleep = 0
+            main_sleep = 0 
+            if num_sleep_records > 1:
                 while main_sleep == 0:
                     for n in range(0,num_sleep_records):
                         if sleep_full['sleep'][n]['isMainSleep'] == True:
@@ -30,117 +65,118 @@ def get_sleep_data(sleep_days):
             sleep_sleep = sleep_full['sleep'][main_sleep]
             sleep_summary = sleep_full['summary']
 
-            sleep_df = pd.DataFrame({
-                'date':day,
-                'awakeCount':sleep_sleep['awakeCount'],
-                'awakeDuration':sleep_sleep['awakeDuration'],
-                'awakeningsCount':sleep_sleep['awakeningsCount'],
-                'duration':sleep_sleep['duration'],
-                'efficiency':sleep_sleep['efficiency'],
-                'endTime':sleep_sleep['endTime'],
-                'isMainSleep':sleep_sleep['isMainSleep'],
-                'minutesAfterWakeup':sleep_sleep['minutesAfterWakeup'],
-                'minutesAsleep':sleep_sleep['minutesAsleep'],
-                'minutesAwake':sleep_sleep['minutesAwake'],
-                'minutesToFallAsleep':sleep_sleep['minutesToFallAsleep'],
-                'restlessCount':sleep_sleep['restlessCount'],
-                'restlessDuration':sleep_sleep['restlessDuration'],
-                'startTime':sleep_sleep['startTime'],
-                'timeInBed':sleep_sleep['timeInBed'],
-
-                'deep':sleep_summary['stages']['deep'],
-                'light':sleep_summary['stages']['light'],
-                'rem':sleep_summary['stages']['rem'],
-                'wake':sleep_summary['stages']['wake'],
-                'totalMinutesAsleep':sleep_summary['totalMinutesAsleep'],
-                'totalSleepRecords':sleep_summary['totalSleepRecords'],
-                'totalTimeInBed':sleep_summary['totalTimeInBed']
-            }, index = [0])
-                
-            sleep_data = sleep_data.append(sleep_df)
+            try:
+                sleep_df = pd.DataFrame({
+                    'date':day,
+                    'awakeCount':sleep_sleep['awakeCount'],
+                    'awakeDuration':sleep_sleep['awakeDuration'],
+                    'awakeningsCount':sleep_sleep['awakeningsCount'],
+                    'duration':sleep_sleep['duration'],
+                    'efficiency':sleep_sleep['efficiency'],
+                    'endTime':sleep_sleep['endTime'],
+                    'isMainSleep':sleep_sleep['isMainSleep'],
+                    'minutesAfterWakeup':sleep_sleep['minutesAfterWakeup'],
+                    'minutesAsleep':sleep_sleep['minutesAsleep'],
+                    'minutesAwake':sleep_sleep['minutesAwake'],
+                    'minutesToFallAsleep':sleep_sleep['minutesToFallAsleep'],
+                    'restlessCount':sleep_sleep['restlessCount'],
+                    'restlessDuration':sleep_sleep['restlessDuration'],
+                    'startTime':sleep_sleep['startTime'],
+                    'timeInBed':sleep_sleep['timeInBed'],
+                    'deep':sleep_summary['stages']['deep'],
+                    'light':sleep_summary['stages']['light'],
+                    'rem':sleep_summary['stages']['rem'],
+                    'wake':sleep_summary['stages']['wake'],
+                    'totalMinutesAsleep':sleep_summary['totalMinutesAsleep'],
+                    'totalSleepRecords':sleep_summary['totalSleepRecords'],
+                    'totalTimeInBed':sleep_summary['totalTimeInBed']
+                    }, index = [0])
+                sleep_data = sleep_data.append(sleep_df)
+            except KeyError as key: 
+                print(f"Key Error: Couldn't find {key}")
  
     return sleep_data
 
 def get_body_data(body_days):
     body_data = pd.DataFrame()
-
     for day in body_days: 
-        body_full = auth2_client.body(date = day)
-
-        if body_full['body']['weight'] == 0:
+        body_full = AUTH2_CLIENT.body(date = day)
+        if body_full['body']['weight'] == 0: # weight not recorded for the day
             pass 
         else:
-            body_df = pd.DataFrame({
-                'date':day,
-                'weight':body_full['body']['weight'],
-                'body_fat':body_full['body']['fat'],
-                'bmi': body_full['body']['bmi']
-            }, index = [0])
-
-            body_data = body_data.append(body_df)
+            try: 
+                body_df = pd.DataFrame({
+                    'date':day,
+                    'weight':body_full['body']['weight'],
+                    'body_fat':body_full['body']['fat'],
+                    'bmi': body_full['body']['bmi']
+                    }, index = [0])
+                body_data = body_data.append(body_df)
+            except KeyError as key: 
+                print(f"Key Error: Couldn't find {key}")
+                
     
     return body_data
 
 def get_activity_data(body_days):
     activity_data = pd.DataFrame()
-
     for day in body_days: 
-        activity_full = auth2_client.activities(date = day)['summary']
-
-        if activity_full['steps'] < 500:
+        activity_full = AUTH2_CLIENT.activities(date = day)['summary']
+        if activity_full['steps'] < 500: # didn't wear watch that day, not enough data 
             pass 
         else:
-            activity_df = pd.DataFrame({
-                'date':day,
-                'activeScore':activity_full['activeScore'],
-                'activityCalories':activity_full['activityCalories'],
-                'caloriesBMR':activity_full['caloriesBMR'],
-                'caloriesOut':activity_full['caloriesOut'],
-                'marginalCalories':activity_full['marginalCalories'],
-                'steps':activity_full['steps'],
-                'sedentaryMinutes':activity_full['sedentaryMinutes'],
-                'lightlyActiveMinutes':activity_full['lightlyActiveMinutes'],
-                'fairlyActiveMinutes':activity_full['fairlyActiveMinutes'],
-                'veryActiveMinutes':activity_full['veryActiveMinutes'],
-                #'restingHeartRate':activity_full['restingHeartRate'],
-                'hr_OOR_mins':activity_full['heartRateZones'][0]['minutes'],
-                'hr_fatburn_mins':activity_full['heartRateZones'][1]['minutes'],
-                'hr_cardio_mins':activity_full['heartRateZones'][2]['minutes'],
-                'hr_peak_mins':activity_full['heartRateZones'][3]['minutes'],
-            }, index = [0])
-
-            activity_data = activity_data.append(activity_df)
+            try: 
+                activity_df = pd.DataFrame({
+                    'date':day,
+                    'activeScore':activity_full['activeScore'],
+                    'activityCalories':activity_full['activityCalories'],
+                    'caloriesBMR':activity_full['caloriesBMR'],
+                    'caloriesOut':activity_full['caloriesOut'],
+                    'marginalCalories':activity_full['marginalCalories'],
+                    'steps':activity_full['steps'],
+                    'sedentaryMinutes':activity_full['sedentaryMinutes'],
+                    'lightlyActiveMinutes':activity_full['lightlyActiveMinutes'],
+                    'fairlyActiveMinutes':activity_full['fairlyActiveMinutes'],
+                    'veryActiveMinutes':activity_full['veryActiveMinutes'],
+                    'restingHeartRate':activity_full['restingHeartRate'],
+                    'hr_OOR_mins':activity_full['heartRateZones'][0]['minutes'],
+                    'hr_fatburn_mins':activity_full['heartRateZones'][1]['minutes'],
+                    'hr_cardio_mins':activity_full['heartRateZones'][2]['minutes'],
+                    'hr_peak_mins':activity_full['heartRateZones'][3]['minutes'],
+                }, index = [0]) 
+                activity_data = activity_data.append(activity_df)
+            except KeyError as key:
+                print(f"Key Error: Couldn't find {key}")
     
     return activity_data
 
 def get_food_data(body_days):
     food_data = pd.DataFrame()
-
     for day in body_days: 
-        food_full = auth2_client.foods_log(date = day)['summary']
-
-        if food_full['calories'] == 0:
+        food_full = AUTH2_CLIENT.foods_log(date = day)['summary']
+        if food_full['calories'] == 0: # Cals not recorded for the day
             pass 
         else:
-            food_df = pd.DataFrame({
-                'date':day,
-                'calories':food_full['calories'],
-                'carbs':food_full['carbs'],
-                'fat':food_full['fat'], 
-                'fiber':food_full['fiber'],
-                'protein':food_full['protein'],
-                'sodium':food_full['sodium'],
-                'water':food_full['water']
-            }, index = [0])
+            try: 
+                food_df = pd.DataFrame({
+                    'date':day,
+                    'calories':food_full['calories'],
+                    'carbs':food_full['carbs'],
+                    'fat':food_full['fat'], 
+                    'fiber':food_full['fiber'],
+                    'protein':food_full['protein'],
+                    'sodium':food_full['sodium'],
+                    'water':food_full['water']
+                    }, index = [0])
+                food_data = food_data.append(food_df)
+            except KeyError as key:
+                print(f"Key Error: Couldn't find {key}")
 
-            food_data = food_data.append(food_df)
-    
     return food_data
 
 def extract_and_merge_data():
     # Sleep data
     sleep_days = set_date_range('Fitbit - Sleep')
-
     sleep = get_sleep_data(sleep_days)
     sleep = pd.merge(pd.DataFrame({'date':sleep_days}), sleep, 
                     on = 'date',
@@ -148,11 +184,9 @@ def extract_and_merge_data():
 
     # Body, Activity, Sleep data
     body_days = set_date_range('Fitbit - Body')
-
     body = get_body_data(body_days)
     activity = get_activity_data(body_days)
     food = get_food_data(body_days)
-
     
     if body.empty: 
         pass
@@ -180,14 +214,10 @@ def extract_and_merge_data():
 
 # OTHER FUNCS
 ## REFRESH SHEETS TRACKER
-def refresh_excel_tracker():
-    Xlsx = win32.DispatchEx('Excel.Application')
-    Xlsx.DisplayAlerts = False
-    Xlsx.Visible = True
-    Xlsx = Xlsx.Workbooks.Open(file_path)
-    time.sleep(10)
-    
-    Xlsx.RefreshAll()
-    time.sleep(10)
+def refresh_sheet_tracker():
+    pass
 
-    Xlsx.Save()
+
+# TESTING 
+if __name__ == "__main__":
+    print()
