@@ -2,6 +2,7 @@
 import os 
 import json
 import pandas as pd
+from datetime import datetime, timedelta
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -9,6 +10,8 @@ import fitbit
 from fitbit import gather_keys_oauth2 as Oauth2
 
 # SETUP
+TODAY = datetime.today()
+
 ##SHEETS
 KEY = os.environ.get('GS_KEY')
 
@@ -19,7 +22,10 @@ SCOPE = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/au
 CREDS = ServiceAccountCredentials.from_json_keyfile_name(KEY, SCOPE)
 CLIENT = gspread.authorize(CREDS)
 
-TRACKER = CLIENT.open('Fitness Tracker').sheet1
+BAF = CLIENT.open('Fitness Tracker').worksheet('body_activity_food')
+SLEEP = CLIENT.open('Fitness Tracker').worksheet('sleep')
+MOODS = CLIENT.open('Fitness Tracker').worksheet('emoods')
+MEASUREMENTS = CLIENT.open('Fitness Tracker').worksheet('measurements')
 
 ##FITBIT
 SERVER = Oauth2.OAuth2Server(CLIENT_ID, CLIENT_SECRET)
@@ -36,11 +42,15 @@ AUTH2_CLIENT = fitbit.Fitbit(CLIENT_ID,
 # FUNCTIONS
 def set_date_range(sheet):
     days = []
+
     last_date = max(sheet.col_values(1)[1:])
+    last_date = datetime.strptime(last_date, "%Y-%m-%d")
+
+    num_days = (TODAY - last_date).days
+    for day in range(1, num_days): 
+        days.append((last_date + timedelta(days = day)).strftime("%Y-%m-%d"))
 
     return days
-
-    
 
 def get_sleep_data(sleep_days):
     sleep_data = pd.DataFrame()
@@ -174,50 +184,38 @@ def get_food_data(body_days):
 
     return food_data
 
-def extract_and_merge_data():
+def extract_and_merge_data(tracker):
+    date_range = set_date_range(tracker)
+
     # Sleep data
-    sleep_days = set_date_range('Fitbit - Sleep')
-    sleep = get_sleep_data(sleep_days)
-    sleep = pd.merge(pd.DataFrame({'date':sleep_days}), sleep, 
+    sleep = get_sleep_data(date_range)
+    sleep = pd.merge(pd.DataFrame({'date': date_range}), sleep, 
                     on = 'date',
                     how = 'outer')
 
     # Body, Activity, Sleep data
-    body_days = set_date_range('Fitbit - Body')
-    body = get_body_data(body_days)
-    activity = get_activity_data(body_days)
-    food = get_food_data(body_days)
+    baf_days = set_date_range()
+    body_activity_food = pd.DataFrame({'date': date_range})
+
+    body = get_body_data(date_range)
+    activity = get_activity_data(date_range)
+    food = get_food_data(date_range)
     
-    if body.empty: 
-        pass
-    else:
-        body_activity_food = pd.merge(pd.DataFrame({'date':body_days}), body,
-                        on = 'date',
-                        how = 'outer')
-
-    if activity.empty:
-        pass
-    else:
-        body_activity_food = pd.merge(body, activity, 
-                        on = 'date',
-                        how = 'outer')
-
-    if food.empty:
-        pass
-    else:
-        body_activity_food = pd.merge(body_activity_food, food, 
-                        on = 'date',
-                        how = 'outer')
+    for df in [body, activity, food]:
+        if df.empty: 
+            pass
+        else: 
+            body_activity_food = pd.merge(body_activity_food, df, 
+                                        on = 'date', 
+                                        how = 'outer')
 
     return sleep, body_activity_food
 
-
 # OTHER FUNCS
 ## REFRESH SHEETS TRACKER
-def refresh_sheet_tracker():
-    pass
-
+def refresh_sheet_tracker(tracker, data):
+    tracker.
 
 # TESTING 
 if __name__ == "__main__":
-    print()
+    x = extract_and_merge_data()
