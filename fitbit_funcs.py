@@ -138,7 +138,6 @@ def get_activity_data(body_days):
             try: 
                 activity_df = pd.DataFrame({
                     'date':day,
-                    'activeScore':activity_full['activeScore'],
                     'activityCalories':activity_full['activityCalories'],
                     'caloriesBMR':activity_full['caloriesBMR'],
                     'caloriesOut':activity_full['caloriesOut'],
@@ -176,7 +175,6 @@ def get_food_data(body_days):
                     'fiber':food_full['fiber'],
                     'protein':food_full['protein'],
                     'sodium':food_full['sodium'],
-                    'water':food_full['water']
                     }, index = [0])
                 food_data = food_data.append(food_df)
             except KeyError as key:
@@ -213,7 +211,7 @@ def refresh_sheet_tracker(tracker, data):
 
 # TESTING 
 if __name__ == "__main__":
-    testing = True
+    testing = False
     if testing: 
         date_range = ['2020-05-06', '2020-05-05']
     else:
@@ -222,4 +220,5 @@ if __name__ == "__main__":
     for tracker, sheet in zip([SLEEP, BAF], ['sleep','baf']):
         for day in date_range: 
             data = extract_data(sheet, [day])
-            refresh_sheet_tracker(tracker, data)
+            if not data.empty:
+                refresh_sheet_tracker(tracker, data)
