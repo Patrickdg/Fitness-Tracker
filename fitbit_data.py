@@ -1,9 +1,5 @@
 # LIBRARIES
-from datetime import datetime
-import win32com.client as win32
-
 from fitbit_funcs import *
-
 
 # PARAMETERS
 

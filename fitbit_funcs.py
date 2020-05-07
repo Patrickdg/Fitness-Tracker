@@ -22,14 +22,14 @@ SCOPE = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/au
 CREDS = ServiceAccountCredentials.from_json_keyfile_name(KEY, SCOPE)
 CLIENT = gspread.authorize(CREDS)
 
-BAF = CLIENT.open('Fitness Tracker').worksheet('body_activity_food')
+BAF = CLIENT.open('Fitness Tracker').worksheet('body_activity_food').append_
 SLEEP = CLIENT.open('Fitness Tracker').worksheet('sleep')
 MOODS = CLIENT.open('Fitness Tracker').worksheet('emoods')
 MEASUREMENTS = CLIENT.open('Fitness Tracker').worksheet('measurements')
 
 ##FITBIT
 SERVER = Oauth2.OAuth2Server(CLIENT_ID, CLIENT_SECRET)
-SERVER.browser_authorize()
+SERVER.browser_authorize()  
 ACCESS_TOKEN = str(SERVER.fitbit.client.session.token['access_token'])
 REFRESH_TOKEN = str(SERVER.fitbit.client.session.token['refresh_token'])
 
@@ -78,28 +78,28 @@ def get_sleep_data(sleep_days):
             try:
                 sleep_df = pd.DataFrame({
                     'date':day,
-                    'awakeCount':sleep_sleep['awakeCount'],
-                    'awakeDuration':sleep_sleep['awakeDuration'],
-                    'awakeningsCount':sleep_sleep['awakeningsCount'],
-                    'duration':sleep_sleep['duration'],
-                    'efficiency':sleep_sleep['efficiency'],
+                    'dateOfSleep':sleep_sleep['dateOfSleep'],
+                    'startTime':sleep_sleep['startTime'],
                     'endTime':sleep_sleep['endTime'],
                     'isMainSleep':sleep_sleep['isMainSleep'],
-                    'minutesAfterWakeup':sleep_sleep['minutesAfterWakeup'],
-                    'minutesAsleep':sleep_sleep['minutesAsleep'],
-                    'minutesAwake':sleep_sleep['minutesAwake'],
-                    'minutesToFallAsleep':sleep_sleep['minutesToFallAsleep'],
-                    'restlessCount':sleep_sleep['restlessCount'],
-                    'restlessDuration':sleep_sleep['restlessDuration'],
-                    'startTime':sleep_sleep['startTime'],
+                    'duration':sleep_sleep['duration'],
+                    'efficiency':sleep_sleep['efficiency'],
                     'timeInBed':sleep_sleep['timeInBed'],
+                    'totalTimeInBed':sleep_summary['totalTimeInBed'],
+                    'minutesToFallAsleep':sleep_sleep['minutesToFallAsleep'],
+                    'totalMinutesAsleep':sleep_summary['totalMinutesAsleep'],
+                    'minutesAsleep':sleep_sleep['minutesAsleep'],
                     'deep':sleep_summary['stages']['deep'],
                     'light':sleep_summary['stages']['light'],
                     'rem':sleep_summary['stages']['rem'],
                     'wake':sleep_summary['stages']['wake'],
-                    'totalMinutesAsleep':sleep_summary['totalMinutesAsleep'],
-                    'totalSleepRecords':sleep_summary['totalSleepRecords'],
-                    'totalTimeInBed':sleep_summary['totalTimeInBed']
+                    'minutesAwake':sleep_sleep['minutesAwake'],
+                    'minutesAfterWakeup':sleep_sleep['minutesAfterWakeup'],
+                    'restlessDuration':sleep_sleep['restlessDuration'],
+                    'restlessCount':sleep_sleep['restlessCount'],
+                    'awakeDuration':sleep_sleep['awakeDuration'],
+                    'awakeCount':sleep_sleep['awakeCount'],
+                    'awakeningsCount':sleep_sleep['awakeningsCount']
                     }, index = [0])
                 sleep_data = sleep_data.append(sleep_df)
             except KeyError as key: 
@@ -185,7 +185,7 @@ def get_food_data(body_days):
     return food_data
 
 def extract_data(sheet, date_range):
-    df = pd.DataFrame()
+    df = pd.DataFrame({'date': date_range})
 
     if sheet == 'sleep':
         df = get_sleep_data(date_range)
@@ -194,29 +194,28 @@ def extract_data(sheet, date_range):
         activity = get_activity_data(date_range)
         food = get_food_data(date_range)
     
-        for df in [body, activity, food]:
-            if df.empty: 
+        for set in [body, activity, food]:
+            if set.empty: 
                 pass
             else: 
-                body_activity_food = pd.merge(body_activity_food, df, 
-                                            on = 'date', 
-                                            how = 'outer')
+                df = pd.merge(df, set,
+                                on = 'date', 
+                                how = 'outer')
 
     return df
 
 # OTHER FUNCS
 ## REFRESH SHEETS TRACKER
 def refresh_sheet_tracker(tracker, data):
-    data = extract_data(sheet, [day])
-    data = [data.date.values[0], data.values[0]]
-    print(data)
-    tracker.append_row(data)
+    data = [data.values[0]][0]
+
+    tracker.append_row(list(data), value_input_option = 'USER_ENTERED')
 
 # TESTING 
 if __name__ == "__main__":
     testing = True
     if testing: 
-        date_range = ['2020-05-06']
+        date_range = ['2020-05-06', '2020-05-05']
     else:
         date_range = set_date_range(BAF)
 
