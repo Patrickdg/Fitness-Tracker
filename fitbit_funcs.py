@@ -184,38 +184,43 @@ def get_food_data(body_days):
 
     return food_data
 
-def extract_and_merge_data(tracker):
-    date_range = set_date_range(tracker)
+def extract_data(sheet, date_range):
+    df = pd.DataFrame()
 
-    # Sleep data
-    sleep = get_sleep_data(date_range)
-    sleep = pd.merge(pd.DataFrame({'date': date_range}), sleep, 
-                    on = 'date',
-                    how = 'outer')
-
-    # Body, Activity, Sleep data
-    baf_days = set_date_range()
-    body_activity_food = pd.DataFrame({'date': date_range})
-
-    body = get_body_data(date_range)
-    activity = get_activity_data(date_range)
-    food = get_food_data(date_range)
+    if sheet == 'sleep':
+        df = get_sleep_data(date_range)
+    elif sheet == 'baf': 
+        body = get_body_data(date_range)
+        activity = get_activity_data(date_range)
+        food = get_food_data(date_range)
     
-    for df in [body, activity, food]:
-        if df.empty: 
-            pass
-        else: 
-            body_activity_food = pd.merge(body_activity_food, df, 
-                                        on = 'date', 
-                                        how = 'outer')
+        for df in [body, activity, food]:
+            if df.empty: 
+                pass
+            else: 
+                body_activity_food = pd.merge(body_activity_food, df, 
+                                            on = 'date', 
+                                            how = 'outer')
 
-    return sleep, body_activity_food
+    return df
 
 # OTHER FUNCS
 ## REFRESH SHEETS TRACKER
 def refresh_sheet_tracker(tracker, data):
-    tracker.
+    data = extract_data(sheet, [day])
+    data = [data.date.values[0], data.values[0]]
+    print(data)
+    tracker.append_row(data)
 
 # TESTING 
 if __name__ == "__main__":
-    x = extract_and_merge_data()
+    testing = True
+    if testing: 
+        date_range = ['2020-05-06']
+    else:
+        date_range = set_date_range(BAF)
+
+    for tracker, sheet in zip([SLEEP, BAF], ['sleep','baf']):
+        for day in date_range: 
+            data = extract_data(sheet, [day])
+            refresh_sheet_tracker(tracker, data)
