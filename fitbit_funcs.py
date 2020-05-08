@@ -22,7 +22,7 @@ SCOPE = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/au
 CREDS = ServiceAccountCredentials.from_json_keyfile_name(KEY, SCOPE)
 CLIENT = gspread.authorize(CREDS)
 
-BAF = CLIENT.open('Fitness Tracker').worksheet('body_activity_food').append_
+BAF = CLIENT.open('Fitness Tracker').worksheet('body_activity_food')
 SLEEP = CLIENT.open('Fitness Tracker').worksheet('sleep')
 MOODS = CLIENT.open('Fitness Tracker').worksheet('emoods')
 MEASUREMENTS = CLIENT.open('Fitness Tracker').worksheet('measurements')
@@ -213,7 +213,7 @@ def refresh_sheet_tracker(tracker, data):
 if __name__ == "__main__":
     testing = False
     if testing: 
-        date_range = ['2020-05-06', '2020-05-05']
+        date_range = ['2020-05-01', '2020-05-02']
     else:
         date_range = set_date_range(BAF)
 
