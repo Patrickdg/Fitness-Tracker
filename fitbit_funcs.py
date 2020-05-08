@@ -3,6 +3,7 @@ import os
 import json
 import pandas as pd
 from datetime import datetime, timedelta
+import zipfile
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -11,6 +12,7 @@ from fitbit import gather_keys_oauth2 as Oauth2
 
 # SETUP
 TODAY = datetime.today()
+emoods_path = r'C:\Users\Patrick\OneDrive\TRAINING\FITNESS_DASHBOARD\emoods-data'
 
 ##SHEETS
 KEY = os.environ.get('GS_KEY')
@@ -199,26 +201,52 @@ def extract_data(sheet, date_range):
                 df = pd.merge(df, set,
                                 on = 'date', 
                                 how = 'outer')
+    elif sheet == 'emoods':
+        df = get_emoods_data(emoods_path)
 
     return df
+
+def format_emoods_data(moods_path):
+    if os.path.exists(emoods_path + '\export.emoods'):
+        os.rename(emoods_path + r'\export.emoods', emoods_path + r'\export.zip')
+        with zipfile.ZipFile(emoods_path+r'\export.zip', 'r') as zip_ref:
+            zip_ref.extractall(emoods_path)
+        
+        for file in os.listdir(emoods_path):
+            if file != 'entry.csv':
+                os.remove(emoods_path+r'\{}'.format(file))
+
+def get_emoods_data(moods_path):
+    format_emoods_data(moods_path)
+    moods_data = pd.read_csv(moods_path + '\entry.csv')
+
+    old_entries = moods_data.iloc[:,1].isin(MOODS.col_values(1)[1:])
+    moods_data = moods_data[~old_entries].iloc[:,1:7]
+
+    return moods_data
 
 # OTHER FUNCS
 ## REFRESH SHEETS TRACKER
 def refresh_sheet_tracker(tracker, data):
-    data = [data.values[0]][0]
-
-    tracker.append_row(list(data), value_input_option = 'USER_ENTERED')
+    for i in range(0, len(data)):
+        row = data.applymap(str).iloc[i].values
+        print(row)
+        tracker.append_row(list(row), value_input_option = 'USER_ENTERED')
 
 # TESTING 
 if __name__ == "__main__":
-    testing = False
+    testing = True
     if testing: 
         date_range = ['2020-05-01', '2020-05-02']
     else:
         date_range = set_date_range(BAF)
 
-    for tracker, sheet in zip([SLEEP, BAF], ['sleep','baf']):
+    for tracker, sheet in zip([SLEEP, BAF, MOODS], ['sleep','baf', 'emoods']):
         for day in date_range: 
             data = extract_data(sheet, [day])
             if not data.empty:
                 refresh_sheet_tracker(tracker, data)
+
+# sheet = 'sleep'
+# test = extract_data(sheet, ['2020-05-01'])
+# SLEEP.append_row(list(test.applymap(str).iloc[0].values), value_input_option='USER_ENTERED')
