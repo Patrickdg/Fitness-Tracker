@@ -2,8 +2,15 @@
 from fitbit_funcs import *
 
 # PARAMETERS
+TRACKERS = {[SLEEP, BAF, MOODS],
+            ['sleep','baf','emoods']}
 
-FINAL_PATH =  r'C:\Users\Patrick\OneDrive\TRAINING\FITNESS DASHBOARD\Fitness Tracker.xlsx'
-SLEEP_PATH = r'C:\Users\Patrick\OneDrive\TRAINING\FITNESS DASHBOARD\fitbit-data\sleep\{}-sleep.csv'.format(DATE_STR)
-BAF_PATH = r'C:\Users\Patrick\OneDrive\TRAINING\FITNESS DASHBOARD\fitbit-data\body\{}-body.csv'.format(DATE_STR)
+# MAIN
+def main():
+    date_range = set_date_range(BAF)
 
+    for tracker, sheet in zip(TRACKERS[0], TRACKERS[1]):
+        for day in date_range: 
+            data = extract_data(sheet, [day])
+            if not data.empty:
+                refresh_sheet_tracker(tracker, data)

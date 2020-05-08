@@ -27,7 +27,6 @@ CLIENT = gspread.authorize(CREDS)
 BAF = CLIENT.open('Fitness Tracker').worksheet('body_activity_food')
 SLEEP = CLIENT.open('Fitness Tracker').worksheet('sleep')
 MOODS = CLIENT.open('Fitness Tracker').worksheet('emoods')
-MEASUREMENTS = CLIENT.open('Fitness Tracker').worksheet('measurements')
 
 ##FITBIT
 SERVER = Oauth2.OAuth2Server(CLIENT_ID, CLIENT_SECRET)
@@ -246,7 +245,3 @@ if __name__ == "__main__":
             data = extract_data(sheet, [day])
             if not data.empty:
                 refresh_sheet_tracker(tracker, data)
-
-# sheet = 'sleep'
-# test = extract_data(sheet, ['2020-05-01'])
-# SLEEP.append_row(list(test.applymap(str).iloc[0].values), value_input_option='USER_ENTERED')
