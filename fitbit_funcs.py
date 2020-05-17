@@ -12,13 +12,11 @@ from fitbit import gather_keys_oauth2 as Oauth2
 
 # SETUP
 TODAY = datetime.today()
+
 emoods_path = r'C:\Users\Patrick\OneDrive\TRAINING\FITNESS_DASHBOARD\emoods-data'
 
 ##SHEETS
 KEY = os.environ.get('GS_KEY')
-
-CLIENT_ID = os.environ.get('FB_ID')
-CLIENT_SECRET = os.environ.get('FB_SCRET')
 
 SCOPE = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
 CREDS = ServiceAccountCredentials.from_json_keyfile_name(KEY, SCOPE)
@@ -29,6 +27,9 @@ SLEEP = CLIENT.open('Fitness Tracker').worksheet('sleep')
 MOODS = CLIENT.open('Fitness Tracker').worksheet('emoods')
 
 ##FITBIT
+CLIENT_ID = os.environ.get('FB_ID')
+CLIENT_SECRET = os.environ.get('FB_SCRET')
+
 SERVER = Oauth2.OAuth2Server(CLIENT_ID, CLIENT_SECRET)
 SERVER.browser_authorize()  
 ACCESS_TOKEN = str(SERVER.fitbit.client.session.token['access_token'])
@@ -125,7 +126,6 @@ def get_body_data(body_days):
                 body_data = body_data.append(body_df)
             except KeyError as key: 
                 print(f"Key Error: Couldn't find {key}")
-                
     
     return body_data
 
