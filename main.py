@@ -1,25 +1,26 @@
 # LIBRARIES
-from data_funcs import * 
+import fitbit_funcs
+import imp
+imp.reload(fitbit_funcs)
 
 # MAIN 
-def main(trackers, days):
-    sheets = map(str.lower, trackers)
-
+def main(trackers, sheets, days):
     for tracker, sheet in zip(trackers, sheets): 
         for day in days: 
-            data = extract_data(sheet, [day])
+            data = fitbit_funcs.extract_data(sheet, [day])
             if not data.empty: 
-                refresh_sheet_tracker(tracker, data)
+                fitbit_funcs.refresh_sheet_tracker(tracker, data)
                 print(f"{sheet} data updated for {day}.")
 
 if __name__ == "__main__":
     testing = True
-    trackers = [BAF, SLEEP, EMOODS]
+    trackers = [fitbit_funcs.BAF, fitbit_funcs.SLEEP, fitbit_funcs.EMOODS]
+    sheets = ['baf', 'sleep', 'emoods']
 
     if testing: 
         date_range = ['2020-05-01', '2020-05-02']
     else:
-        date_range = set_date_range(BAF)
+        date_range = fitbit_funcs.set_date_range(fitbit_funcs.BAF)
 
-    main(trackers, date_range)
+    main(trackers, sheets, date_range)
 

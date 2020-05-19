@@ -9,6 +9,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 import fitbit
 from fitbit import gather_keys_oauth2 as Oauth2
 
+import mood_funcs
+
 # SETUP
 TODAY = datetime.today()
 
@@ -179,3 +181,32 @@ def get_food_data(body_days):
                 print(f"Key Error: Couldn't find {key}")
 
     return food_data
+
+## REFRESH SHEETS TRACKER
+def refresh_sheet_tracker(tracker, data):
+    for i in range(0, len(data)):
+        row = data.applymap(str).iloc[i].values
+        print(row)
+        tracker.append_row(list(row), value_input_option = 'USER_ENTERED')
+
+def extract_data(sheet, date_range):
+    df = pd.DataFrame({'date': date_range})
+
+    if sheet == 'sleep':
+        df = get_sleep_data(date_range)
+    elif sheet == 'baf': 
+        body = get_body_data(date_range)
+        activity = get_activity_data(date_range)
+        food = get_food_data(date_range)
+    
+        for set in [body, activity, food]:
+            if set.empty: 
+                pass
+            else: 
+                df = pd.merge(df, set,
+                                on = 'date', 
+                                how = 'outer')
+    elif sheet == 'emoods':
+        df = mood_funcs.get_emoods_data(mood_funcs.emoods_path, EMOODS)
+
+    return df
