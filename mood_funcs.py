@@ -1,3 +1,9 @@
+# LIBRARIES
+import os
+import pandas as pd
+import zipfile
+from fitbit_funcs import *
+
 # DECLARATIONS
 emoods_path = r'C:\Users\Patrick\OneDrive\TRAINING\FITNESS_DASHBOARD\emoods-data'
 
@@ -16,7 +22,7 @@ def get_emoods_data(moods_path):
     format_emoods_data(moods_path)
     moods_data = pd.read_csv(moods_path + '\entry.csv')
 
-    old_entries = moods_data.iloc[:,1].isin(MOODS.col_values(1)[1:])
+    old_entries = moods_data.iloc[:,1].isin(EMOODS.col_values(1)[1:])
     moods_data = moods_data[~old_entries].iloc[:,1:7]
 
     return moods_data

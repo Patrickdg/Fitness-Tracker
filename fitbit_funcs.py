@@ -3,7 +3,6 @@ import os
 import json
 import pandas as pd
 from datetime import datetime, timedelta
-import zipfile
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -22,7 +21,7 @@ CLIENT = gspread.authorize(CREDS)
 
 BAF = CLIENT.open('Fitness Tracker').worksheet('body_activity_food')
 SLEEP = CLIENT.open('Fitness Tracker').worksheet('sleep')
-MOODS = CLIENT.open('Fitness Tracker').worksheet('emoods')
+EMOODS = CLIENT.open('Fitness Tracker').worksheet('emoods')
 
 ##FITBIT
 CLIENT_ID = os.environ.get('FB_ID')
